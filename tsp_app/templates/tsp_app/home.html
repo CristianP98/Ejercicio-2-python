@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa de Google - Problema del Viajante</title>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        .info {
+            margin-top: 20px;
+        }
+    </style>
+    <!-- Incluir la librería de Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwhuUZzlGMFDYC-r-dS5Abo0XKCOruaSM&callback=initMap" async defer></script>
+    <script>
+        let map;
+        let markers = [];
+        let locations = [];
+
+        function initMap() {
+            const barcelona = {lat: 41.3851, lng: 2.1734};
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: barcelona
+            });
+
+            // Configurar el evento de clic en el mapa
+            map.addListener('click', function(e) {
+                addMarker(e.latLng);
+                locations.push({lat: e.latLng.lat(), lng: e.latLng.lng()});
+                updateLocationList();
+            });
+        }
+
+        function addMarker(location) {
+            const marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            markers.push(marker);
+        }
+
+        function updateLocationList() {
+            const locationList = document.getElementById('location-list');
+            locationList.innerHTML = '';
+            locations.forEach((loc, index) => {
+                locationList.innerHTML += `<li>Ubicación ${index + 1}: (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})</li>`;
+            });
+        }
+
+        function submitForm() {
+            const locationInput = document.getElementById('location-input');
+            locationInput.value = JSON.stringify(locations);
+        }
+    </script>
+</head>
+<body>
+    <h1>Problema del Viajante - Google Maps</h1>
+    <form method="post" action="{% url 'home' %}" onsubmit="submitForm()">
+        {% csrf_token %}
+        <input type="hidden" id="location-input" name="locations">
+        <button type="submit">Resolver TSP</button>
+    </form>
+    <div id="map"></div>
+    <div class="info">
+        <h2>Ubicaciones Seleccionadas:</h2>
+        <ul id="location-list"></ul>
+    </div>
+    {% if shortest_route %}
+
+    <script>
+        function displayRoute(route) {
+            // Convertir los datos del recorrido en una ruta para la polyline
+            const routePath = route.map(loc => new google.maps.LatLng(loc.lat, loc.lng));
+            
+            // Crear una polyline para mostrar la ruta en el mapa
+            const polyline = new google.maps.Polyline({
+                path: routePath,
+                geodesic: true,
+                strokeColor: '#0000FF', // Color de la línea
+                strokeOpacity: 1.0,
+                strokeWeight: 2
+            });
+            
+            // Añadir la polyline al mapa
+            polyline.setMap(map);
+        }
+    </script>
+    
+        <script>
+            const route = {{ shortest_route|safe }};
+            const distance = {{ min_distance|safe }};
+            displayRoute(route);
+            displayInfo(route, distance);
+        </script>
+    {% endif %}
+</body>
+</html>
